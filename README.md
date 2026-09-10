@@ -6,7 +6,7 @@ estructurada bajo estrictas normas de normalización (3FN), control de stock por
 ## Tecnologías y Arquitectura
 - **Modelado DER:** Diagrams.net (Draw.io)
 - **Base de Datos:** MySQL / Relacional
-- **Seguridad y Auditoría:** Registro de accesos e inicios de sesión de usuarios (alineado con conceptos de ciberdefensa y control de privilegios).
+- **Seguridad y Auditoría:** Registro de accesos e inicios de sesión de usuarios (alineado con conceptos de ciberseguridad y control de privilegios).
 
 ## Diagrama Entidad-Relación (DER)
 Puedes visualizar el diseño conceptual exportado en el repositorio:
