@@ -1,0 +1,158 @@
+/* ══════════════════════════════════════════════════════════════════
+   Lo de Carlitos — app.css
+   Estilos complementarios a Bootstrap 5
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Variables ────────────────────────────────────────────────────── */
+:root {
+    --ldc-primary:      #0d6efd;   /* Bootstrap blue */
+    --ldc-accent:       #198754;   /* verde éxito */
+    --ldc-warning:      #ffc107;
+    --ldc-danger:       #dc3545;
+    --ldc-bg:           #f8f9fa;
+    --ldc-card-border:  #dee2e6;
+    --ldc-text-muted:   #6c757d;
+    --ldc-footer-bg:    #f1f3f5;
+}
+
+/* ── Layout general ───────────────────────────────────────────────── */
+html,
+body {
+    height: 100%;
+    background-color: var(--ldc-bg);
+    font-size: 0.92rem;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* El contenido empuja el footer hacia abajo */
+.container-fluid.px-4.py-4 {
+    flex: 1;
+}
+
+/* ── Navbar ───────────────────────────────────────────────────────── */
+.navbar-brand {
+    font-size: 1.15rem;
+    letter-spacing: 0.3px;
+}
+
+/* ── Footer ───────────────────────────────────────────────────────── */
+.app-footer {
+    background-color: var(--ldc-footer-bg);
+    font-size: 0.8rem;
+}
+
+/* ── Tarjetas del Dashboard ───────────────────────────────────────── */
+.stat-card {
+    border: 1px solid var(--ldc-card-border);
+    border-radius: 0.5rem;
+    background: #fff;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card .stat-icon {
+    font-size: 2rem;
+    opacity: 0.75;
+}
+
+.stat-card .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+}
+
+.stat-card .stat-label {
+    font-size: 0.82rem;
+    color: var(--ldc-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ── Colores de tarjetas ──────────────────────────────────────────── */
+.stat-card.color-blue   { border-top: 4px solid var(--ldc-primary); }
+.stat-card.color-green  { border-top: 4px solid var(--ldc-accent); }
+.stat-card.color-yellow { border-top: 4px solid var(--ldc-warning); }
+.stat-card.color-red    { border-top: 4px solid var(--ldc-danger); }
+.stat-card.color-orange { border-top: 4px solid #fd7e14; }
+.stat-card.color-purple { border-top: 4px solid #7c3aed; }
+.stat-card.color-teal   { border-top: 4px solid #0d9488; }
+.stat-card.color-indigo { border-top: 4px solid #4338ca; }
+
+/* ── Tablas ───────────────────────────────────────────────────────── */
+.table thead th {
+    background-color: #e9ecef;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+/* ── Botones de acción en tablas ──────────────────────────────────── */
+.btn-action {
+    padding: 0.2rem 0.45rem;
+    font-size: 0.78rem;
+}
+
+/* ── Secciones de formulario complejas (Ventas) ───────────────────── */
+.form-section {
+    border: 1px solid var(--ldc-card-border);
+    border-radius: 0.4rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    background: #fff;
+}
+
+.form-section .form-section-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    color: var(--ldc-primary);
+    border-bottom: 1px solid var(--ldc-card-border);
+    padding-bottom: 0.4rem;
+}
+
+/* ── Login page ───────────────────────────────────────────────────── */
+.login-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--ldc-bg);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 0.6rem;
+}
+
+/* ── Badges de estado ─────────────────────────────────────────────── */
+.badge-activo   { background-color: var(--ldc-accent) !important; }
+.badge-inactivo { background-color: var(--ldc-danger)  !important; }
+
+/* ── Badges de estado de cheques ──────────────────────────────────── */
+.badge-cheque-cartera    { background-color: var(--ldc-warning)  !important; color: #212529 !important; }
+.badge-cheque-depositado { background-color: #0dcaf0             !important; color: #212529 !important; }
+.badge-cheque-cobrado    { background-color: var(--ldc-accent)   !important; }
+.badge-cheque-rechazado  { background-color: var(--ldc-danger)   !important; }
+
+/* ── Navbar activo ────────────────────────────────────────────────── */
+.navbar-dark .navbar-nav .nav-link.active {
+    color: #fff !important;
+    font-weight: 600;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+.navbar-dark .dropdown-menu .dropdown-item.active,
+.navbar-dark .dropdown-menu .dropdown-item:active {
+    background-color: #3b4a5a;
+}
