@@ -71,9 +71,6 @@ function addProductRow() {
             '<input type="number" step="1" min="1" class="form-control form-control-sm text-center input-cantidad" name="detalle[' + idx + '][cantidad]" id="cantidad_' + idx + '" value="1" required oninput="calcularSubtotal(' + idx + ')">' +
         '</td>' +
         '<td>' +
-            '<input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm text-center input-descuento" name="detalle[' + idx + '][descuento]" id="descuento_' + idx + '" value="0" oninput="calcularSubtotal(' + idx + ')">' +
-        '</td>' +
-        '<td>' +
             '<div class="text-end fw-bold fs-6 subtotal-text" id="subtotal_' + idx + '">$0,00</div>' +
         '</td>' +
         '<td class="text-center">' +
@@ -105,19 +102,14 @@ function onProductoSelected(selectElem, idx) {
 function calcularSubtotal(idx) {
     var precioInput = document.getElementById('precio_' + idx);
     var cantidadInput = document.getElementById('cantidad_' + idx);
-    var descuentoInput = document.getElementById('descuento_' + idx);
     var subtotalElem = document.getElementById('subtotal_' + idx);
 
     if (!precioInput || !cantidadInput || !subtotalElem) return;
 
     var precio = parseFloat(precioInput.value) || 0;
     var cantidad = parseInt(cantidadInput.value, 10) || 0;
-    var descuento = parseFloat(descuentoInput ? descuentoInput.value : 0) || 0;
 
-    if (descuento < 0) descuento = 0;
-    if (descuento > 100) descuento = 100;
-
-    var subtotal = precio * cantidad * (1 - (descuento / 100));
+    var subtotal = precio * cantidad;
     subtotalElem.textContent = formatCurrency(subtotal);
     subtotalElem.setAttribute('data-subtotal', subtotal.toFixed(2));
 
@@ -219,6 +211,8 @@ function addPagoRow() {
             '<div id="cta-cte-container-' + idx + '" class="d-none text-muted small p-1">' +
                 '<i class="fa-solid fa-info-circle text-info me-1"></i>Se generará un saldo de deuda en Cuenta Corriente para este cliente.' +
             '</div>' +
+            '<div id="saldo-favor-container-' + idx + '" class="d-none small p-1">' +
+            '</div>' +
         '</td>' +
         '<td class="text-center align-top">' +
             '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRow(this, \'pago\')" title="Quitar pago">' +
@@ -238,6 +232,7 @@ function toggleChequeForm(selectElem, idx) {
     var medioNombre = (selectedOption.getAttribute('data-nombre') || '').trim();
     var chequeContainer = document.getElementById('cheque-container-' + idx);
     var ctaCteContainer = document.getElementById('cta-cte-container-' + idx);
+    var saldoFavorContainer = document.getElementById('saldo-favor-container-' + idx);
 
     if (medioNombre === 'Cheque' || medioNombre === 'E-cheque') {
         if (chequeContainer) {
@@ -259,6 +254,7 @@ function toggleChequeForm(selectElem, idx) {
             }
         }
         if (ctaCteContainer) ctaCteContainer.classList.add('d-none');
+        if (saldoFavorContainer) saldoFavorContainer.classList.add('d-none');
     } else if (medioNombre === 'Cuenta Corriente') {
         if (chequeContainer) {
             chequeContainer.classList.add('d-none');
@@ -267,6 +263,19 @@ function toggleChequeForm(selectElem, idx) {
             });
         }
         if (ctaCteContainer) ctaCteContainer.classList.remove('d-none');
+        if (saldoFavorContainer) saldoFavorContainer.classList.add('d-none');
+    } else if (medioNombre === 'Saldo a favor') {
+        if (chequeContainer) {
+            chequeContainer.classList.add('d-none');
+            chequeContainer.querySelectorAll('.cheque-field').forEach(function(inp) {
+                inp.required = false;
+            });
+        }
+        if (ctaCteContainer) ctaCteContainer.classList.add('d-none');
+        if (saldoFavorContainer) {
+            saldoFavorContainer.classList.remove('d-none');
+            actualizarTextoSaldoFavorFila(idx, getSaldoFavorClienteSeleccionado());
+        }
     } else {
         if (chequeContainer) {
             chequeContainer.classList.add('d-none');
@@ -275,6 +284,74 @@ function toggleChequeForm(selectElem, idx) {
             });
         }
         if (ctaCteContainer) ctaCteContainer.classList.add('d-none');
+        if (saldoFavorContainer) saldoFavorContainer.classList.add('d-none');
+    }
+}
+
+/**
+ * Retorna el saldo a favor disponible del cliente actualmente seleccionado en el formulario.
+ */
+function getSaldoFavorClienteSeleccionado() {
+    var selectCliente = document.getElementById('id_cliente');
+    if (!selectCliente || !selectCliente.value) return 0;
+    var clienteId = parseInt(selectCliente.value, 10);
+    if (typeof ventaSaldosFavor !== 'undefined' && ventaSaldosFavor[clienteId] !== undefined) {
+        return parseFloat(ventaSaldosFavor[clienteId]) || 0;
+    }
+    var selectedOption = selectCliente.options[selectCliente.selectedIndex];
+    if (selectedOption && selectedOption.getAttribute('data-saldo-favor')) {
+        return parseFloat(selectedOption.getAttribute('data-saldo-favor')) || 0;
+    }
+    return 0;
+}
+
+/**
+ * Actualiza el indicador de saldo a favor del cliente y el texto en las filas de pago.
+ */
+function actualizarInfoSaldoFavorCliente() {
+    var selectCliente = document.getElementById('id_cliente');
+    var infoDiv = document.getElementById('cliente-saldo-favor-info');
+    var montoSpan = document.getElementById('cliente-saldo-favor-monto');
+    var saldo = getSaldoFavorClienteSeleccionado();
+
+    if (infoDiv && montoSpan) {
+        if (selectCliente && selectCliente.value) {
+            montoSpan.textContent = formatCurrency(saldo);
+            infoDiv.classList.remove('d-none');
+        } else {
+            infoDiv.classList.add('d-none');
+        }
+    }
+
+    document.querySelectorAll('.select-medio-pago').forEach(function(select) {
+        var opt = select.options[select.selectedIndex];
+        if (opt && (opt.getAttribute('data-nombre') || '').trim() === 'Saldo a favor') {
+            var row = select.closest('tr');
+            if (row) {
+                var idx = row.id.replace('pago-row-', '');
+                actualizarTextoSaldoFavorFila(idx, saldo);
+            }
+        }
+    });
+
+    calcularTotalPagos();
+}
+
+/**
+ * Actualiza el texto explicativo / advertencia en el contenedor de Saldo a favor de una fila.
+ */
+function actualizarTextoSaldoFavorFila(idx, saldo) {
+    var ctn = document.getElementById('saldo-favor-container-' + idx);
+    if (!ctn) return;
+    var inputMonto = document.getElementById('pago_monto_' + idx);
+    var montoIngresado = parseFloat(inputMonto?.value) || 0;
+
+    if (saldo <= 0) {
+        ctn.innerHTML = '<span class="text-danger fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i>El cliente no posee saldo a favor disponible ($0,00).</span>';
+    } else if (montoIngresado > saldo) {
+        ctn.innerHTML = '<span class="text-danger fw-semibold"><i class="fa-solid fa-triangle-exclamation me-1"></i>El monto (' + formatCurrency(montoIngresado) + ') supera el saldo disponible (' + formatCurrency(saldo) + ').</span>';
+    } else {
+        ctn.innerHTML = '<span class="text-success"><i class="fa-solid fa-wallet me-1"></i>Saldo a favor disponible: <strong>' + formatCurrency(saldo) + '</strong></span>';
     }
 }
 
@@ -308,6 +385,19 @@ function calcularTotalPagos() {
         lblTotalPagos.textContent = formatCurrency(totalPagos);
     }
 
+    // Actualizar avisos de filas con Saldo a favor al cambiar montos
+    var saldoFavorCliente = getSaldoFavorClienteSeleccionado();
+    document.querySelectorAll('.select-medio-pago').forEach(function(select) {
+        var opt = select.options[select.selectedIndex];
+        if (opt && (opt.getAttribute('data-nombre') || '').trim() === 'Saldo a favor') {
+            var row = select.closest('tr');
+            if (row) {
+                var idx = row.id.replace('pago-row-', '');
+                actualizarTextoSaldoFavorFila(idx, saldoFavorCliente);
+            }
+        }
+    });
+
     var totalVenta = parseFloat(document.getElementById('lblTotalVenta')?.getAttribute('data-total')) || 0;
     var diff = totalPagos - totalVenta;
     var badge = document.getElementById('lblDiferenciaBadge');
@@ -330,6 +420,12 @@ function calcularTotalPagos() {
  * Validación previa al submit del formulario de venta.
  */
 function validateVenta() {
+    var selectCliente = document.getElementById('id_cliente');
+    if (!selectCliente || !selectCliente.value) {
+        alert('Debe seleccionar un cliente.');
+        return false;
+    }
+
     var prodRows = document.querySelectorAll('#tbodyProductos tr');
     if (prodRows.length === 0) {
         alert('Debe agregar al menos un producto a la venta.');
@@ -349,9 +445,24 @@ function validateVenta() {
     }
 
     var totalPagos = 0;
-    document.querySelectorAll('.input-pago-monto').forEach(function(inp) {
-        totalPagos += parseFloat(inp.value) || 0;
+    var totalSaldoFavor = 0;
+    document.querySelectorAll('#tbodyPagos tr').forEach(function(tr) {
+        var inp = tr.querySelector('.input-pago-monto');
+        var monto = parseFloat(inp?.value) || 0;
+        totalPagos += monto;
+
+        var select = tr.querySelector('.select-medio-pago');
+        var opt = select ? select.options[select.selectedIndex] : null;
+        if (opt && (opt.getAttribute('data-nombre') || '').trim() === 'Saldo a favor') {
+            totalSaldoFavor += monto;
+        }
     });
+
+    var saldoDisponible = getSaldoFavorClienteSeleccionado();
+    if (totalSaldoFavor > 0 && totalSaldoFavor > saldoDisponible + 0.001) {
+        alert('El monto a pagar con Saldo a favor (' + formatCurrency(totalSaldoFavor) + ') supera el saldo disponible del cliente (' + formatCurrency(saldoDisponible) + ').');
+        return false;
+    }
 
     if (Math.abs(totalPagos - totalVenta) >= 0.05) {
         alert('La suma de los medios de pago (' + formatCurrency(totalPagos) + ') no coincide con el total de la venta (' + formatCurrency(totalVenta) + ').');

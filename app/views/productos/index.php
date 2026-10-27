@@ -46,8 +46,8 @@
                     <td><?= (int) $p['id_producto'] ?></td>
                     <td><?= htmlspecialchars($p['nombre']) ?></td>
                     <td><?= htmlspecialchars($p['especie'] ?? '—') ?></td>
-                    <td class="text-end">$&nbsp;<?= number_format((float) $p['precio_costo'], 2, ',', '.') ?></td>
-                    <td class="text-end">$&nbsp;<?= number_format((float) $p['precio_venta'], 2, ',', '.') ?></td>
+                    <td class="text-end">$&nbsp;<?= number_format((float) $p['precio_costo'], 0, ',', '.') ?></td>
+                    <td class="text-end">$&nbsp;<?= number_format((float) $p['precio_venta'], 0, ',', '.') ?></td>
                     <td><?= htmlspecialchars($p['razon_social']) ?></td>
                     <td class="text-center">
                         <a href="<?= URL_BASE ?>/productos/edit/<?= (int) $p['id_producto'] ?>"

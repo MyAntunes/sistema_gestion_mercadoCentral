@@ -50,7 +50,11 @@ class ChequeController
         $ok = $this->model->updateEstado($id, $nuevoEstado);
 
         if ($ok) {
-            setFlash('success', 'Estado del cheque actualizado correctamente.');
+            if ($nuevoEstado === 'Rechazado') {
+                setFlash('success', 'Cheque rechazado: el importe se trasladó a la Cuenta Corriente del cliente.');
+            } else {
+                setFlash('success', 'Estado del cheque actualizado correctamente.');
+            }
         } else {
             setFlash('error', 'No se pudo actualizar el estado. La transición no es válida.');
         }

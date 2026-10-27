@@ -4,6 +4,7 @@ require_once __DIR__ . '/../models/Cliente.php';
 require_once __DIR__ . '/../models/Producto.php';
 require_once __DIR__ . '/../models/MedioPago.php';
 require_once __DIR__ . '/../models/CtaCteCliente.php';
+require_once __DIR__ . '/../models/SaldoCliente.php';
 
 /**
  * Controller Venta
@@ -15,14 +16,16 @@ class VentaController
     private Producto $productoModel;
     private MedioPago $medioPagoModel;
     private CtaCteCliente $ctaCteModel;
+    private SaldoCliente $saldoClienteModel;
 
     public function __construct()
     {
-        $this->model          = new Venta();
-        $this->clienteModel   = new Cliente();
-        $this->productoModel  = new Producto();
-        $this->medioPagoModel = new MedioPago();
-        $this->ctaCteModel    = new CtaCteCliente();
+        $this->model             = new Venta();
+        $this->clienteModel      = new Cliente();
+        $this->productoModel     = new Producto();
+        $this->medioPagoModel    = new MedioPago();
+        $this->ctaCteModel       = new CtaCteCliente();
+        $this->saldoClienteModel = new SaldoCliente();
     }
 
     /**
@@ -52,9 +55,10 @@ class VentaController
     {
         requireAuth();
 
-        $clientes   = $this->clienteModel->getAll();
-        $productos  = $this->productoModel->getAll();
-        $mediosPago = $this->medioPagoModel->getAll();
+        $clientes    = $this->clienteModel->getAll();
+        $productos   = $this->productoModel->getAll();
+        $mediosPago  = $this->medioPagoModel->getAll();
+        $saldosFavor = $this->saldoClienteModel->getSaldosDisponiblesMap();
 
         $pageTitle  = 'Nueva Venta';
         include __DIR__ . '/../views/ventas/create.php';
@@ -97,20 +101,18 @@ class VentaController
             $idProd   = (int) ($det['id_producto'] ?? 0);
             $cant     = (int) ($det['cantidad'] ?? 0);
             $precioU  = (float) ($det['precio_unitario'] ?? 0);
-            $desc     = isset($det['descuento']) && $det['descuento'] !== '' ? (float) $det['descuento'] : 0.0;
 
             if ($idProd <= 0 || $cant <= 0 || $precioU < 0) {
                 continue;
             }
 
-            $subtotal = $precioU * $cant * (1 - ($desc / 100));
+            $subtotal = $precioU * $cant;
             $totalVenta += $subtotal;
 
             $detallesLimpios[] = [
                 'id_producto'     => $idProd,
                 'cantidad'        => $cant,
                 'precio_unitario' => $precioU,
-                'descuento'       => $desc,
             ];
         }
 
@@ -162,9 +164,26 @@ class VentaController
             return;
         }
 
+        // Validar si se utiliza Saldo a favor que no supere el saldo disponible del cliente
+        $saldoFavorUsado = 0.0;
+        foreach ($pagosLimpios as $pago) {
+            if ($pago['medio_pago_nombre'] === 'Saldo a favor') {
+                $saldoFavorUsado += (float) $pago['monto'];
+            }
+        }
+
+        if ($saldoFavorUsado > 0) {
+            $saldoDisponible = $this->saldoClienteModel->getSaldoDisponible((int) $idCliente);
+            if ($saldoFavorUsado > $saldoDisponible + 0.001) {
+                setFlash('danger', 'El monto a pagar con Saldo a favor ($' . number_format($saldoFavorUsado, 0) . ') supera el saldo disponible del cliente ($' . number_format($saldoDisponible, 0) . ').');
+                redirect('ventas/create');
+                return;
+            }
+        }
+
         // Validación de cuadre de caja (tolerancia $0.05 por redondeo)
         if (abs($totalPagos - $totalVenta) > 0.05) {
-            setFlash('danger', 'El total de los medios de pago ($' . number_format($totalPagos, 2) . ') no coincide con el total de la venta ($' . number_format($totalVenta, 2) . ').');
+            setFlash('danger', 'El total de los medios de pago ($' . number_format($totalPagos, 0) . ') no coincide con el total de la venta ($' . number_format($totalVenta, 0) . ').');
             redirect('ventas/create');
             return;
         }
@@ -203,6 +222,18 @@ class VentaController
         $detalles   = $this->model->getDetalleById($id);
         $mediosPago = $this->model->getMediosPagoById($id);
         $ctaCte     = $this->ctaCteModel->getByVenta($id);
+
+        // Reconstruir URL de retorno solo con las claves permitidas (evita open-redirect)
+        $clavesPermitidas = ['fecha_desde', 'fecha_hasta', 'id_cliente'];
+        $qsVolver = [];
+        foreach ($clavesPermitidas as $clave) {
+            $valor = trim($_GET[$clave] ?? '');
+            if ($valor !== '') {
+                $qsVolver[$clave] = $valor;
+            }
+        }
+        $urlVolver = URL_BASE . '/ventas'
+            . (!empty($qsVolver) ? '?' . http_build_query($qsVolver) : '');
 
         $pageTitle = 'Detalle de Venta #' . $id;
         include __DIR__ . '/../views/ventas/show.php';

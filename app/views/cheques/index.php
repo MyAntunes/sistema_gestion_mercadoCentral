@@ -97,7 +97,7 @@ $totalMonto   = array_sum(array_column($cheques, 'monto'));
                                 <td><?= htmlspecialchars($ch['fecha_emision'] ?? '—') ?></td>
                                 <td><?= htmlspecialchars($ch['fecha_pago'] ?? '—') ?></td>
                                 <td class="text-end">
-                                    $<?= number_format((float)$ch['monto'], 2, ',', '.') ?>
+                                    $<?= number_format((float)$ch['monto'], 0, ',', '.') ?>
                                 </td>
                                 <td><?= htmlspecialchars($ch['cliente'] ?? '—') ?></td>
                                 <td>
@@ -142,7 +142,7 @@ $totalMonto   = array_sum(array_column($cheques, 'monto'));
         <!-- Totales al pie -->
         <div class="card-footer d-flex gap-4 text-muted small">
             <span><strong>Total cheques:</strong> <?= $totalCheques ?></span>
-            <span><strong>Monto total:</strong> $<?= number_format($totalMonto, 2, ',', '.') ?></span>
+            <span><strong>Monto total:</strong> $<?= number_format($totalMonto, 0, ',', '.') ?></span>
         </div>
     </div>
 <?php endif; ?>

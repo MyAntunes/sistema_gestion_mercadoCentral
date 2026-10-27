@@ -97,10 +97,19 @@ include __DIR__ . '/../layouts/header.php';
                                     </span>
                                 </td>
                                 <td class="text-end fw-bold text-success">
-                                    $<?= number_format((float) ($v['total'] ?? 0), 2, ',', '.') ?>
+                                    $<?= number_format((float) ($v['total'] ?? 0), 0, ',', '.') ?>
                                 </td>
                                 <td class="text-center">
-                                    <a href="<?= URL_BASE ?>/ventas/show/<?= $v['id_venta'] ?>" class="btn btn-sm btn-outline-primary" title="Ver detalle">
+                                    <?php
+                                    $qsFiltros = http_build_query(array_filter([
+                                        'fecha_desde' => $filtros['fecha_desde'] ?? '',
+                                        'fecha_hasta' => $filtros['fecha_hasta'] ?? '',
+                                        'id_cliente'  => $filtros['id_cliente']  ?? '',
+                                    ]));
+                                    $urlDetalle = URL_BASE . '/ventas/show/' . $v['id_venta']
+                                        . ($qsFiltros !== '' ? '?' . $qsFiltros : '');
+                                    ?>
+                                    <a href="<?= htmlspecialchars($urlDetalle) ?>" class="btn btn-sm btn-outline-primary" title="Ver detalle">
                                         <i class="fa-solid fa-eye"></i> Ver
                                     </a>
                                 </td>
@@ -112,7 +121,7 @@ include __DIR__ . '/../layouts/header.php';
                     <tfoot class="table-light fw-bold border-top">
                         <tr>
                             <td colspan="4" class="text-end">Total General (<?= count($ventas) ?> ventas):</td>
-                            <td class="text-end text-success fs-6">$<?= number_format($granTotal, 2, ',', '.') ?></td>
+                            <td class="text-end text-success fs-6">$<?= number_format($granTotal, 0, ',', '.') ?></td>
                             <td></td>
                         </tr>
                     </tfoot>

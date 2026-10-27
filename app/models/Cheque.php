@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/CtaCteCliente.php';
 
 /**
  * Modelo Cheque
@@ -98,11 +99,50 @@ class Cheque
             return false;
         }
 
-        $stmt = $this->db->prepare('UPDATE cheque SET estado = :estado WHERE id_cheque = :id');
-        return $stmt->execute([
-            ':estado' => $estado,
-            ':id'     => $id,
-        ]);
+        if ($estado !== 'Rechazado') {
+            $stmt = $this->db->prepare('UPDATE cheque SET estado = :estado WHERE id_cheque = :id');
+            return $stmt->execute([
+                ':estado' => $estado,
+                ':id'     => $id,
+            ]);
+        }
+
+        // Rechazado: cambio de estado + traslado de la deuda a cuenta corriente, atómico.
+        try {
+            $this->db->beginTransaction();
+
+            // La condición sobre el estado actual evita un doble traslado ante concurrencia.
+            $stmt = $this->db->prepare(
+                'UPDATE cheque SET estado = :estado WHERE id_cheque = :id AND estado = :estado_actual'
+            );
+            $stmt->execute([
+                ':estado'        => $estado,
+                ':id'            => $id,
+                ':estado_actual' => $cheque['estado'],
+            ]);
+
+            if ($stmt->rowCount() === 0) {
+                $this->db->rollBack();
+                return false;
+            }
+
+            $ctaCte = new CtaCteCliente();
+            $ctaCte->registrarDeudaPorChequeRechazado(
+                (int) $cheque['id_venta'],
+                (float) $cheque['monto'],
+                date('Y-m-d'),
+                $id
+            );
+
+            $this->db->commit();
+            return true;
+        } catch (Throwable $e) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            error_log('Error en Cheque::updateEstado (Rechazado): ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**

@@ -62,9 +62,10 @@ $routes = [
         '' => ['HomeController', 'index'],
     ],
     'home' => [
-        ''              => ['HomeController', 'index'],
-        'index'         => ['HomeController', 'index'],
-        'graficos-data' => ['HomeController', 'graficosData'],
+        ''                  => ['HomeController', 'index'],
+        'index'             => ['HomeController', 'index'],
+        'graficos-data'     => ['HomeController', 'graficosData'],
+        'medios-pago-data'  => ['HomeController', 'mediosPagoData'],
     ],
 
     // Clientes
@@ -122,10 +123,11 @@ $routes = [
 
     // Cobranzas
     'cobranzas' => [
-        ''                => ['CobranzaController', 'index'],
-        'index'           => ['CobranzaController', 'index'],
-        'cliente'         => ['CobranzaController', 'verCliente'],    // + param id_cliente
-        'registrar-pago'  => ['CobranzaController', 'registrarPago'], // POST
+        ''                        => ['CobranzaController', 'index'],
+        'index'                   => ['CobranzaController', 'index'],
+        'cliente'                 => ['CobranzaController', 'verCliente'],             // + param id_cliente
+        'registrar-pago'          => ['CobranzaController', 'registrarPago'],          // POST
+        'registrar-pago-a-cuenta' => ['CobranzaController', 'registrarPagoACuenta'],   // POST
     ],
 
     // Cheques

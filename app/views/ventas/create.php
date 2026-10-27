@@ -33,15 +33,22 @@ include __DIR__ . '/../layouts/header.php';
                 </div>
                 <div class="col-md-8">
                     <label for="id_cliente" class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
-                    <select class="form-select" id="id_cliente" name="id_cliente" required>
+                    <select class="form-select" id="id_cliente" name="id_cliente" required onchange="actualizarInfoSaldoFavorCliente()">
                         <option value="">-- Seleccione un cliente --</option>
                         <?php foreach ($clientes as $cli): ?>
-                            <option value="<?= $cli['id_cliente'] ?>">
-                                <?= htmlspecialchars($cli['nombre_apellido']) ?> 
+                            <?php $saldo = (float) ($saldosFavor[$cli['id_cliente']] ?? 0); ?>
+                            <option value="<?= $cli['id_cliente'] ?>" data-saldo-favor="<?= $saldo ?>">
+                                <?= htmlspecialchars($cli['nombre_apellido']) ?>
                                 <?= !empty($cli['cuil']) ? ' (CUIL: ' . htmlspecialchars($cli['cuil']) . ')' : '' ?>
+                                <?= $saldo > 0 ? ' [Saldo a favor: $' . number_format($saldo, 0, ',', '.') . ']' : '' ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
+                    <div id="cliente-saldo-favor-info" class="form-text mt-1 d-none">
+                        <span class="badge bg-info text-dark">
+                            <i class="fa-solid fa-wallet me-1"></i>Saldo a favor disponible: <strong id="cliente-saldo-favor-monto">$0,00</strong>
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -65,7 +72,6 @@ include __DIR__ . '/../layouts/header.php';
                             <th style="min-width: 250px;">Producto <span class="text-danger">*</span></th>
                             <th style="width: 150px;">Precio Unitario ($)</th>
                             <th style="width: 120px;">Cantidad <span class="text-danger">*</span></th>
-                            <th style="width: 120px;">Descuento %</th>
                             <th style="width: 150px;" class="text-end">Subtotal ($)</th>
                             <th style="width: 70px;" class="text-center">Acción</th>
                         </tr>
@@ -75,7 +81,7 @@ include __DIR__ . '/../layouts/header.php';
                     </tbody>
                     <tfoot class="table-light fw-bold">
                         <tr>
-                            <td colspan="4" class="text-end fs-6">TOTAL VENTA:</td>
+                            <td colspan="3" class="text-end fs-6">TOTAL VENTA:</td>
                             <td class="text-end fs-5 text-primary" id="lblTotalVenta">$0,00</td>
                             <td></td>
                         </tr>
@@ -141,6 +147,7 @@ include __DIR__ . '/../layouts/header.php';
 <script>
     var ventaProductos = <?= json_encode($productos, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
     var ventaMediosPago = <?= json_encode($mediosPago, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+    var ventaSaldosFavor = <?= json_encode($saldosFavor, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
 </script>
 
 <?php

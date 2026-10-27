@@ -116,6 +116,59 @@ class CtaCteCliente
     }
 
     /**
+     * Traslada a cuenta corriente la deuda generada por un cheque rechazado.
+     * Si la venta ya tiene cta cte suma el monto al saldo; si no, la crea.
+     * Registra el detalle con monto NEGATIVO (convención de deuda) vinculado al cheque.
+     *
+     * IMPORTANTE: NO abre transacción propia; el llamador debe haber hecho beginTransaction()
+     * sobre la misma conexión PDO. Lanza excepción ante cualquier error.
+     */
+    public function registrarDeudaPorChequeRechazado(int $idVenta, float $monto, string $fecha, int $idCheque): void
+    {
+        if (!$this->db->inTransaction()) {
+            throw new LogicException('registrarDeudaPorChequeRechazado requiere una transacción abierta.');
+        }
+
+        $ctaCte = $this->getByVenta($idVenta);
+
+        if ($ctaCte === null) {
+            $stmtCtaCte = $this->db->prepare(
+                'INSERT INTO cta_cte_cliente (fecha, saldo, id_venta)
+                 VALUES (:fecha, :saldo, :id_venta)'
+            );
+            $stmtCtaCte->execute([
+                ':fecha'    => $fecha,
+                ':saldo'    => $monto,
+                ':id_venta' => $idVenta,
+            ]);
+            $idCtaCte = (int) $this->db->lastInsertId();
+        } else {
+            $idCtaCte = (int) $ctaCte['id_cta_cte_cliente'];
+            $stmtUpdate = $this->db->prepare(
+                'UPDATE cta_cte_cliente
+                 SET saldo = saldo + :monto
+                 WHERE id_cta_cte_cliente = :id_cta_cte_cliente'
+            );
+            $stmtUpdate->execute([
+                ':monto'              => $monto,
+                ':id_cta_cte_cliente' => $idCtaCte,
+            ]);
+        }
+
+        $stmtDetalle = $this->db->prepare(
+            'INSERT INTO detalle_cta_cte_cliente (monto, fecha, id_cta_cte_cliente, concepto, id_cheque)
+             VALUES (:monto, :fecha, :id_cta_cte_cliente, :concepto, :id_cheque)'
+        );
+        $stmtDetalle->execute([
+            ':monto'              => -$monto,
+            ':fecha'              => $fecha,
+            ':id_cta_cte_cliente' => $idCtaCte,
+            ':concepto'           => 'Cheque #' . $idCheque . ' rechazado',
+            ':id_cheque'          => $idCheque,
+        ]);
+    }
+
+    /**
      * Retorna los movimientos de detalle de una cuenta corriente.
      */
     public function getDetallesByCtaCte(int $idCtaCte): array
@@ -130,19 +183,22 @@ class CtaCteCliente
     }
 
     /**
-     * Retorna todos los clientes que tienen saldo > 0 en cta_cte_cliente,
-     * con el saldo total acumulado.
+     * Retorna todos los clientes con su deuda en cuenta corriente (saldo_total)
+     * y su saldo a favor disponible (saldo_favor).
      */
     public function getClientesConSaldo(): array
     {
         $stmt = $this->db->query(
-            'SELECT c.id_cliente, c.nombre_apellido, SUM(ccc.saldo) AS saldo_total
-             FROM cta_cte_cliente ccc
-             JOIN ventas v ON ccc.id_venta = v.id_venta
-             JOIN cliente c ON v.id_cliente = c.id_cliente
-             WHERE ccc.saldo > 0
-             GROUP BY c.id_cliente, c.nombre_apellido
-             ORDER BY c.nombre_apellido'
+            "SELECT c.id_cliente, c.nombre_apellido,
+                    COALESCE((SELECT SUM(ccc.saldo)
+                              FROM cta_cte_cliente ccc
+                              JOIN ventas v ON ccc.id_venta = v.id_venta
+                              WHERE v.id_cliente = c.id_cliente), 0) AS saldo_total,
+                    COALESCE((SELECT SUM(CASE WHEN scm.tipo = 'Ingreso' THEN scm.monto ELSE -scm.monto END)
+                              FROM saldo_cliente_movimiento scm
+                              WHERE scm.id_cliente = c.id_cliente), 0) AS saldo_favor
+             FROM cliente c
+             ORDER BY c.nombre_apellido"
         );
         return $stmt->fetchAll();
     }

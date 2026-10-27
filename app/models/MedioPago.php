@@ -16,6 +16,7 @@ class MedioPago
         'Transferencia',
         'Mercado_pago',
         'Cuenta Corriente',
+        'Saldo a favor',
     ];
 
     public function __construct()

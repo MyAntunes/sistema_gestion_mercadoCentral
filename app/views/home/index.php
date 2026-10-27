@@ -37,7 +37,7 @@
                 <i class="fa-solid fa-dollar-sign stat-icon text-success"></i>
             </div>
             <div class="stat-value text-success mt-2" style="font-size:1.5rem;">
-                $<?= number_format((float)$monto_total_ventas, 2, ',', '.') ?>
+                $<?= number_format((float)$monto_total_ventas, 0, ',', '.') ?>
             </div>
         </div>
     </div>
@@ -123,6 +123,95 @@
 </div><!-- /.row indicadores -->
 
 <!-- ═══════════════════════════════════════════════════════════
+     VENTAS POR MEDIO DE PAGO
+════════════════════════════════════════════════════════════ -->
+<h2 class="h6 fw-semibold text-muted text-uppercase mb-2 mt-2">
+    <i class="fa-solid fa-credit-card me-1"></i>Ventas por Medio de Pago
+</h2>
+
+<div class="row g-3 mb-4" id="rowMediosPago">
+
+    <!-- Efectivo -->
+    <div class="col-6 col-md-2">
+        <div class="stat-card color-green p-3 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="stat-label">Efectivo</span>
+                <i class="fa-solid fa-money-bill-wave stat-icon text-success"></i>
+            </div>
+            <div class="stat-value text-success mt-2" style="font-size:1.3rem;" id="kpi-efectivo">
+                $<?= number_format((float)($mediosPagoData['Efectivo'] ?? 0), 0, ',', '.') ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transferencia -->
+    <div class="col-6 col-md-2">
+        <div class="stat-card color-blue p-3 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="stat-label">Transferencia</span>
+                <i class="fa-solid fa-building-columns stat-icon text-primary"></i>
+            </div>
+            <div class="stat-value text-primary mt-2" style="font-size:1.3rem;" id="kpi-transferencia">
+                $<?= number_format((float)($mediosPagoData['Transferencia'] ?? 0), 0, ',', '.') ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mercado Pago -->
+    <div class="col-6 col-md-2">
+        <div class="stat-card color-indigo p-3 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="stat-label">Mercado Pago</span>
+                <i class="fa-solid fa-mobile-screen stat-icon" style="color:#4338ca;"></i>
+            </div>
+            <div class="stat-value mt-2" style="font-size:1.3rem;color:#4338ca;" id="kpi-mercadopago">
+                $<?= number_format((float)($mediosPagoData['Mercado_pago'] ?? 0), 0, ',', '.') ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cheque -->
+    <div class="col-6 col-md-2">
+        <div class="stat-card color-yellow p-3 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="stat-label">Cheque</span>
+                <i class="fa-solid fa-money-check stat-icon" style="color:#b45309;"></i>
+            </div>
+            <div class="stat-value mt-2" style="font-size:1.3rem;color:#b45309;" id="kpi-cheque">
+                $<?= number_format((float)($mediosPagoData['Cheque'] ?? 0), 0, ',', '.') ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-cheque -->
+    <div class="col-6 col-md-2">
+        <div class="stat-card color-teal p-3 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="stat-label">E-cheque</span>
+                <i class="fa-solid fa-file-invoice-dollar stat-icon" style="color:#0d9488;"></i>
+            </div>
+            <div class="stat-value mt-2" style="font-size:1.3rem;color:#0d9488;" id="kpi-echeque">
+                $<?= number_format((float)($mediosPagoData['E-cheque'] ?? 0), 0, ',', '.') ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuenta Corriente -->
+    <div class="col-6 col-md-2">
+        <div class="stat-card color-orange p-3 h-100 d-flex flex-column justify-content-between">
+            <div class="d-flex justify-content-between align-items-start">
+                <span class="stat-label">Cta. Corriente</span>
+                <i class="fa-solid fa-handshake stat-icon text-warning"></i>
+            </div>
+            <div class="stat-value text-warning mt-2" style="font-size:1.3rem;" id="kpi-ctacorriente">
+                $<?= number_format((float)($mediosPagoData['Cuenta Corriente'] ?? 0), 0, ',', '.') ?>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /.row medios de pago -->
+
+<!-- ═══════════════════════════════════════════════════════════
      GRÁFICOS
 ════════════════════════════════════════════════════════════ -->
 
@@ -181,8 +270,27 @@
 (function () {
     'use strict';
 
-    // ── URL del endpoint AJAX ────────────────────────────────────────────────
-    const GRAFICOS_URL = '<?= URL_BASE ?>/home/graficos-data';
+    // ── URLs de endpoints AJAX ───────────────────────────────────────────────
+    const GRAFICOS_URL     = '<?= URL_BASE ?>/home/graficos-data';
+    const MEDIOS_PAGO_URL  = '<?= URL_BASE ?>/home/medios-pago-data';
+
+    // ── Mapa: clave JSON → id del elemento DOM ───────────────────────────────
+    const MEDIOS_PAGO_MAP = {
+        'Efectivo':         'kpi-efectivo',
+        'Transferencia':    'kpi-transferencia',
+        'Mercado_pago':     'kpi-mercadopago',
+        'Cheque':           'kpi-cheque',
+        'E-cheque':         'kpi-echeque',
+        'Cuenta Corriente': 'kpi-ctacorriente'
+    };
+
+    // ── Helper de formateo moneda AR ─────────────────────────────────────────
+    function fmtPeso(valor) {
+        return '$' + (valor || 0).toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
 
     // ── Opciones base compartidas ────────────────────────────────────────────
     const baseOptions = {
@@ -284,7 +392,7 @@
         }
     });
 
-    // ── Función de actualización ─────────────────────────────────────────────
+    // ── Función de actualización de gráficos ─────────────────────────────────
     function cargarGraficos(periodo) {
         const spinner = document.getElementById('chartSpinner');
         spinner.classList.remove('d-none');
@@ -315,13 +423,37 @@
         });
     }
 
+    // ── Función de actualización de medios de pago ───────────────────────────
+    function cargarMediosPago(periodo) {
+        fetch(MEDIOS_PAGO_URL + '?periodo=' + encodeURIComponent(periodo), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (res) {
+            if (!res.ok) throw new Error('Error HTTP ' + res.status);
+            return res.json();
+        })
+        .then(function (data) {
+            Object.keys(MEDIOS_PAGO_MAP).forEach(function (key) {
+                var el = document.getElementById(MEDIOS_PAGO_MAP[key]);
+                if (el) {
+                    el.textContent = fmtPeso(data[key] || 0);
+                }
+            });
+        })
+        .catch(function (err) {
+            console.error('Error al cargar medios de pago:', err);
+        });
+    }
+
     // ── Listener del selector ────────────────────────────────────────────────
     document.getElementById('selectPeriodo').addEventListener('change', function () {
         cargarGraficos(this.value);
+        cargarMediosPago(this.value);
     });
 
     // ── Carga inicial con "mes" ──────────────────────────────────────────────
     cargarGraficos('mes');
+    cargarMediosPago('mes');
 
 })();
 </script>

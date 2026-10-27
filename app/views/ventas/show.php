@@ -10,7 +10,7 @@ include __DIR__ . '/../layouts/header.php';
         <p class="text-muted small mb-0">Información completa de la operación</p>
     </div>
     <div class="d-flex gap-2">
-        <a href="<?= URL_BASE ?>/ventas" class="btn btn-outline-secondary">
+        <a href="<?= htmlspecialchars($urlVolver) ?>" class="btn btn-outline-secondary">
             <i class="fa-solid fa-arrow-left me-1"></i>Volver al listado
         </a>
         <a href="<?= URL_BASE ?>/ventas/create" class="btn btn-primary">
@@ -102,19 +102,17 @@ include __DIR__ . '/../layouts/header.php';
                         <th>Producto</th>
                         <th class="text-end" style="width: 150px;">Precio Unit.</th>
                         <th class="text-center" style="width: 120px;">Cantidad</th>
-                        <th class="text-center" style="width: 120px;">Descuento</th>
                         <th class="text-end" style="width: 160px;">Subtotal</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php 
+                    <?php
                     $totalVentaCalc = 0.0;
                     $i = 1;
-                    foreach ($detalles as $det): 
+                    foreach ($detalles as $det):
                         $pu = (float) $det['precio_unitario'];
                         $cant = (int) $det['cantidad'];
-                        $desc = (float) ($det['descuento'] ?? 0);
-                        $subtotal = $pu * $cant * (1 - ($desc / 100));
+                        $subtotal = $pu * $cant;
                         $totalVentaCalc += $subtotal;
                     ?>
                         <tr>
@@ -125,17 +123,16 @@ include __DIR__ . '/../layouts/header.php';
                                     <small class="text-muted"><?= htmlspecialchars($det['producto_especie']) ?></small>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-end">$<?= number_format($pu, 2, ',', '.') ?></td>
+                            <td class="text-end">$<?= number_format($pu, 0, ',', '.') ?></td>
                             <td class="text-center"><?= $cant ?></td>
-                            <td class="text-center"><?= $desc > 0 ? $desc . '%' : '-' ?></td>
-                            <td class="text-end fw-bold">$<?= number_format($subtotal, 2, ',', '.') ?></td>
+                            <td class="text-end fw-bold">$<?= number_format($subtotal, 0, ',', '.') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
                 <tfoot class="table-light fw-bold">
                     <tr>
-                        <td colspan="5" class="text-end fs-6">TOTAL PRODUCTOS:</td>
-                        <td class="text-end text-primary fs-5">$<?= number_format($totalVentaCalc, 2, ',', '.') ?></td>
+                        <td colspan="4" class="text-end fs-6">TOTAL PRODUCTOS:</td>
+                        <td class="text-end text-primary fs-5">$<?= number_format($totalVentaCalc, 0, ',', '.') ?></td>
                     </tr>
                 </tfoot>
             </table>
@@ -173,7 +170,7 @@ include __DIR__ . '/../layouts/header.php';
                                     <?= htmlspecialchars($pago['medio_pago_nombre']) ?>
                                 </span>
                             </td>
-                            <td class="text-end fw-bold fs-6">$<?= number_format($montoPago, 2, ',', '.') ?></td>
+                            <td class="text-end fw-bold fs-6">$<?= number_format($montoPago, 0, ',', '.') ?></td>
                             <td>
                                 <?php if (!empty($pago['id_cheque'])): ?>
                                     <div class="p-2 border rounded bg-light">
@@ -194,6 +191,13 @@ include __DIR__ . '/../layouts/header.php';
                                                 <em>Obs: <?= htmlspecialchars($pago['cheque_observaciones']) ?></em>
                                             </div>
                                         <?php endif; ?>
+                                        <?php if ($pago['cheque_estado'] === 'Rechazado'): ?>
+                                            <div class="small text-danger mt-2">
+                                                <i class="fa-solid fa-triangle-exclamation me-1"></i>
+                                                Importe de $<?= number_format($montoPago, 0, ',', '.') ?> trasladado a Cuenta Corriente.
+                                                <a href="<?= URL_BASE ?>/cobranzas/cliente/<?= (int) $venta['id_cliente'] ?>">Ver Cuenta Corriente del cliente</a>
+                                            </div>
+                                        <?php endif; ?>
                                         <div class="mt-2">
                                             <a href="<?= URL_BASE ?>/cheques" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size: 0.8rem;">
                                                 <i class="fa-solid fa-arrow-up-right-from-square me-1"></i>Ir a Gestión de Cheques
@@ -207,7 +211,7 @@ include __DIR__ . '/../layouts/header.php';
                                         </div>
                                         <?php if ($ctaCte): ?>
                                             <div class="small mt-1">
-                                                <span><strong>Saldo pendiente de este comprobante:</strong> $<?= number_format((float)$ctaCte['saldo'], 2, ',', '.') ?></span>
+                                                <span><strong>Saldo pendiente de este comprobante:</strong> $<?= number_format((float)$ctaCte['saldo'], 0, ',', '.') ?></span>
                                             </div>
                                         <?php endif; ?>
                                         <div class="mt-2">
@@ -216,6 +220,8 @@ include __DIR__ . '/../layouts/header.php';
                                             </a>
                                         </div>
                                     </div>
+                                <?php elseif ($pago['medio_pago_nombre'] === 'Saldo a favor'): ?>
+                                    <span class="text-muted"><i class="fa-solid fa-wallet text-primary me-1"></i>Abonado con saldo a favor</span>
                                 <?php else: ?>
                                     <span class="text-muted"><i class="fa-solid fa-circle-check text-success me-1"></i>Cancelado al contado</span>
                                 <?php endif; ?>
@@ -226,7 +232,7 @@ include __DIR__ . '/../layouts/header.php';
                 <tfoot class="table-light fw-bold">
                     <tr>
                         <td class="text-end fs-6">TOTAL PAGADO:</td>
-                        <td class="text-end text-success fs-5">$<?= number_format($totalPagosCalc, 2, ',', '.') ?></td>
+                        <td class="text-end text-success fs-5">$<?= number_format($totalPagosCalc, 0, ',', '.') ?></td>
                         <td></td>
                     </tr>
                 </tfoot>

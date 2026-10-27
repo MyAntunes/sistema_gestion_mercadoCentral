@@ -133,4 +133,60 @@ class Dashboard
             'cantidades' => $cantidades,
         ];
     }
+    /**
+     * Retorna el monto total cobrado por cada medio de pago según el período.
+     * Siempre incluye los 6 medios, con 0.00 si no hay datos en el período.
+     *
+     * @param string $periodo  'dia' | 'semana' | 'mes' | 'anio'
+     * @return array<string, float>  ['Efectivo' => 1500.00, ...]
+     */
+    public function getMediosPagoData(string $periodo): array
+    {
+        // Inicializar todos los medios en 0 para garantizar presencia aunque no haya datos
+        $result = [
+            'Efectivo'          => 0.00,
+            'Transferencia'     => 0.00,
+            'Mercado_pago'      => 0.00,
+            'Cheque'            => 0.00,
+            'E-cheque'          => 0.00,
+            'Cuenta Corriente'  => 0.00,
+        ];
+
+        switch ($periodo) {
+            case 'dia':
+                $where = 'v.fecha = CURDATE()';
+                break;
+            case 'semana':
+                $where = 'v.fecha >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)';
+                break;
+            case 'anio':
+                $where = 'v.fecha >= DATE_SUB(CURDATE(), INTERVAL 11 MONTH)';
+                break;
+            default: // 'mes'
+                $where = 'YEAR(v.fecha) = YEAR(CURDATE()) AND MONTH(v.fecha) = MONTH(CURDATE())';
+                break;
+        }
+
+        $sql = "
+            SELECT
+                mp.medio_pago,
+                COALESCE(SUM(vmp.monto), 0) AS total
+            FROM ventas v
+            INNER JOIN venta_medio_pago vmp ON vmp.id_venta = v.id_venta
+            INNER JOIN medio_pago mp ON mp.id_medio_pago = vmp.id_medio_pago
+            WHERE {$where}
+            GROUP BY mp.medio_pago
+        ";
+
+        $stmt = $this->db->query($sql);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($rows as $row) {
+            if (array_key_exists($row['medio_pago'], $result)) {
+                $result[$row['medio_pago']] = (float) $row['total'];
+            }
+        }
+
+        return $result;
+    }
 }

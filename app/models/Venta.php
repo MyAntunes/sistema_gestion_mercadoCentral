@@ -20,7 +20,7 @@ class Venta
     public function getAll(array $filtros = []): array
     {
         $sql = 'SELECT v.*, c.nombre_apellido, u.nombre_usuario,
-                       (SELECT COALESCE(SUM(dv.precio_unitario * dv.cantidad * (1 - COALESCE(dv.descuento, 0) / 100)), 0)
+                       (SELECT COALESCE(SUM(dv.precio_unitario * dv.cantidad), 0)
                         FROM detalle_ventas dv WHERE dv.id_venta = v.id_venta) AS total
                 FROM ventas v
                 JOIN cliente c ON v.id_cliente = c.id_cliente
@@ -109,7 +109,7 @@ class Venta
      * Registra una venta completa con sus detalles y medios de pago dentro de una transacción.
      *
      * @param array $ventaData ['fecha' => string, 'id_cliente' => int, 'id_usuario' => int]
-     * @param array $detalles  Array de items ['id_producto' => int, 'cantidad' => int, 'precio_unitario' => float, 'descuento' => float]
+     * @param array $detalles  Array de items ['id_producto' => int, 'cantidad' => int, 'precio_unitario' => float]
      * @param array $pagos     Array de pagos ['id_medio_pago' => int, 'medio_pago_nombre' => string, 'monto' => float, 'cheque' => array|null]
      * @return int|false Retorna el id_venta generado o false si falla.
      */
@@ -132,16 +132,14 @@ class Venta
 
             // 2. Insertar detalle de productos
             $stmtDetalle = $this->db->prepare(
-                'INSERT INTO detalle_ventas (precio_unitario, cantidad, descuento, id_producto, id_venta)
-                 VALUES (:precio_unitario, :cantidad, :descuento, :id_producto, :id_venta)'
+                'INSERT INTO detalle_ventas (precio_unitario, cantidad, id_producto, id_venta)
+                 VALUES (:precio_unitario, :cantidad, :id_producto, :id_venta)'
             );
 
             foreach ($detalles as $det) {
-                $descuento = isset($det['descuento']) && $det['descuento'] !== '' ? (float) $det['descuento'] : 0.00;
                 $stmtDetalle->execute([
                     ':precio_unitario' => (float) $det['precio_unitario'],
                     ':cantidad'        => (int) $det['cantidad'],
-                    ':descuento'       => $descuento,
                     ':id_producto'     => (int) $det['id_producto'],
                     ':id_venta'        => $idVenta,
                 ]);
@@ -172,6 +170,33 @@ class Venta
                 'INSERT INTO detalle_cta_cte_cliente (monto, fecha, id_cta_cte_cliente)
                  VALUES (:monto, :fecha, :id_cta_cte_cliente)'
             );
+
+            $stmtSaldoUso = $this->db->prepare(
+                "INSERT INTO saldo_cliente_movimiento (id_cliente, fecha, tipo, monto, id_medio_pago, id_venta)
+                 VALUES (:id_cliente, :fecha, 'Uso', :monto, NULL, :id_venta)"
+            );
+
+            // Re-chequeo del saldo disponible dentro de la transacción si se usa Saldo a favor
+            $totalSaldoFavorRequerido = 0.0;
+            foreach ($pagos as $p) {
+                if (trim($p['medio_pago_nombre'] ?? '') === 'Saldo a favor') {
+                    $totalSaldoFavorRequerido += (float) $p['monto'];
+                }
+            }
+
+            if ($totalSaldoFavorRequerido > 0) {
+                $stmtCheckSaldo = $this->db->prepare(
+                    "SELECT COALESCE(SUM(CASE WHEN tipo = 'Ingreso' THEN monto ELSE -monto END), 0) AS saldo_disponible
+                     FROM saldo_cliente_movimiento
+                     WHERE id_cliente = :id_cliente"
+                );
+                $stmtCheckSaldo->execute([':id_cliente' => (int) $ventaData['id_cliente']]);
+                $saldoDisponibleActual = (float) $stmtCheckSaldo->fetchColumn();
+
+                if ($totalSaldoFavorRequerido > $saldoDisponibleActual + 0.001) {
+                    throw new RuntimeException("Saldo a favor insuficiente para el cliente (disponible: $saldoDisponibleActual, requerido: $totalSaldoFavorRequerido).");
+                }
+            }
 
             foreach ($pagos as $pago) {
                 $monto = (float) $pago['monto'];
@@ -229,6 +254,16 @@ class Venta
                         ':monto'              => -$monto, // o el saldo inicial de deuda
                         ':fecha'              => $ventaData['fecha'],
                         ':id_cta_cte_cliente' => $idCtaCte,
+                    ]);
+                }
+
+                // d. Si es Saldo a favor
+                if ($nombreMedio === 'Saldo a favor') {
+                    $stmtSaldoUso->execute([
+                        ':id_cliente' => (int) $ventaData['id_cliente'],
+                        ':fecha'      => $ventaData['fecha'],
+                        ':monto'      => $monto,
+                        ':id_venta'   => $idVenta,
                     ]);
                 }
             }

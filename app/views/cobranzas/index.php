@@ -20,10 +20,22 @@
             </thead>
             <tbody>
                 <?php foreach ($clientes as $c): ?>
+                <?php
+                    $deuda = (float) $c['saldo_total'];
+                    $favor = (float) $c['saldo_favor'];
+                ?>
                 <tr>
                     <td><?= htmlspecialchars($c['nombre_apellido']) ?></td>
-                    <td class="text-end fw-semibold text-danger">
-                        $ <?= number_format((float) $c['saldo_total'], 2, ',', '.') ?>
+                    <td class="text-end fw-semibold">
+                        <?php if ($deuda > 0): ?>
+                            <div class="text-danger">Deuda: $ <?= number_format($deuda, 0, ',', '.') ?></div>
+                        <?php endif; ?>
+                        <?php if ($favor > 0): ?>
+                            <div class="text-success">A favor: $ <?= number_format($favor, 0, ',', '.') ?></div>
+                        <?php endif; ?>
+                        <?php if ($deuda <= 0 && $favor <= 0): ?>
+                            <span class="text-muted">$ 0</span>
+                        <?php endif; ?>
                     </td>
                     <td class="text-center">
                         <a href="<?= URL_BASE ?>/cobranzas/cliente/<?= (int) $c['id_cliente'] ?>"
